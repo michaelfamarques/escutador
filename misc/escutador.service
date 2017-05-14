@@ -1,0 +1,12 @@
+[Unit]
+Description=Escutador Service
+Requires=network.target
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /root/escutador/index.js
+Type=forking
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

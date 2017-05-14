@@ -17,6 +17,11 @@
   },
   "homepage": "https://github.com/michaelfamarques/escutador#readme",
   "dependencies": {
-    "node-record-lpcm16": "^0.3.0"
+    "glob": "^7.1.1",
+    "minimist": "^1.2.0",
+    "node-record-lpcm16": "^0.3.0",
+    "request": "^2.81.0",
+    "wake_on_lan": "^0.0.4",
+    "winston": "^2.3.1"
   }
 }
