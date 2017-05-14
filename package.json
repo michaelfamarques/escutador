@@ -1,0 +1,22 @@
+{
+  "name": "escutador",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaelfamarques/escutador.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/michaelfamarques/escutador/issues"
+  },
+  "homepage": "https://github.com/michaelfamarques/escutador#readme",
+  "dependencies": {
+    "node-record-lpcm16": "^0.3.0"
+  }
+}
