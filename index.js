@@ -6,9 +6,12 @@ const path = require('path');
 const fs = require('fs');
 const Detector = require('./lib/index').Detector;
 const Models = require('./lib/index').Models;
+const Led = require('./lib/led');
 const models = new Models();
 const args = require('minimist')(process.argv.slice(2));
 const wol = require('wake_on_lan');
+const child_process = require('child_process');
+
 var logger = new(winston.Logger)({
 	transports: [
 		new(winston.transports.Console)(),
@@ -28,7 +31,12 @@ const snowboyJson = {
     "voice_samples": []
 };
 
+Led.off();
+
 if (args.model) {
+
+	// comando para gravar
+	// rec -r 16000 -c 1 -b 16 -e signed-integer arquivo.wav
 
 	let files = glob.sync("wavs/"+args.model+"*.wav");
 	let json = JSON.parse(JSON.stringify(snowboyJson));
@@ -65,9 +73,6 @@ if (args.model) {
 	})
 	.on('response', (response) => {
 		logger.info("Treinamento realizado, salvando arquivo umdl.");
-		logger.info(response.statusCode);
-		logger.info(response.body);
-		process.exit();
 	})
 	.pipe(fs.createWriteStream('resources/'+args.model+'.umdl'));
 
@@ -84,7 +89,7 @@ if(modelFiles.length == 0){
 modelFiles.forEach((m) => {
 	models.add({
 		file: m,
-		sensitivity: '0.5',
+		sensitivity: '0.375',
 		hotwords: path.basename(m, '.umdl')
 	});
 });
@@ -92,7 +97,7 @@ modelFiles.forEach((m) => {
 const detector = new Detector({
 	resource: "resources/common.res",
 	models: models,
-	audioGain: 2.0
+	audioGain: 3.0
 });
 
 //detector.on('silence', function () {});
@@ -100,25 +105,64 @@ const detector = new Detector({
 
 detector.on('error', function () { logger.info('error'); });
 
-detector.on('hotword', function (index, hotword, buffer) { // Buffer arguments contains sound that triggered the event, for example, it could be written to a wav stream 
-	switch(hotword){
-		case "ligarnote":
-			logger.info("Enviando pacotes para ligar o notebook...");
-			wol.wake('B0:25:AA:18:32:92');
-		break;
-	}
-});
+var odroidAtivo = false;
+var timeout = null;
 
-//logger.info("1");
+function falaAceita(){
+	Led.on();
+	clearInterval(timeout);
+	timeout = setTimeout(() => {
+		odroidAtivo = false;
+		Led.off();		
+	}, 4000);
+}
+
+detector.on('hotword', function (index, hotword, buffer) { // Buffer arguments contains sound that triggered the event, for example, it could be written to a wav stream 
+	
+	logger.info('Hotword: '+hotword);
+
+	if(odroidAtivo){
+		switch(hotword){
+			case "ligarnote":
+				falaAceita();
+				logger.info("Enviando pacotes para ligar o notebook...");
+				wol.wake('B0:25:AA:18:32:92');
+			break;
+			case "notedesligar":
+				falaAceita();
+				logger.info("Enviando comando para desligar o notebook...");
+        		child_process.execSync('desligar-note');				
+			break;
+			case "tvdesligar":
+				falaAceita();
+				logger.info("Enviando comando para desligar a tv...");
+        		child_process.execSync('echo "standby 0" | cec-client -s');
+			break;
+			case "tvligar":
+				falaAceita();
+				logger.info("Enviando comando para ligar a tv...");
+        		child_process.execSync('echo "on 0" | cec-client -s');
+			break;
+		}
+	}
+
+	if(!odroidAtivo && hotword == "odroid"){
+		logger.info("Escutando...");
+		Led.heartbeat();
+		odroidAtivo = true;
+		timeout = setTimeout(() => {
+			odroidAtivo = false;
+			Led.off();
+		}, 6000);
+	}
+
+});
 
 const mic = record.start({
-	threshold: 0
+	threshold: 0,
+	silence: 0
 });
 
-//logger.info("2");
-
 mic.pipe(detector);
-
-//logger.info("3");
 
 logger.info("Iniciando escutador...");
